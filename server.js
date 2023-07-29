@@ -1,10 +1,13 @@
 const express = require('express');
-const app = express();
 const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cors());
 
 app.listen(PORT, () => {
   console.log({
@@ -50,13 +53,10 @@ app.get('/', (request, response) => {
 
 app.post('/signin', (request, response) => {
   const { email, password } = request.body;
-
-  console.log(request.body)
-
   const user = database.users.find((user) => user.email === email && user.password === password);
 
-  if (user) response.json(user);
-  else response.json('User not found');
+  if (user) response.json('success');
+  else response.status(404).json('User not found');
 })
 
 
@@ -73,10 +73,31 @@ app.post('/register', (request, response) => {
   }
 
   if (name && email && password) {
-    database.users.push(newUser)
-    response.json(newUser)
+    database.users.push(newUser);
+    response.json(newUser);
   } else {
-    response.json('Invalid credentials')
+    response.json('Invalid credentials');
+  }
+})
+
+app.get('/profile/:id', (request, response) => {
+  const { id } = request.params;
+  const user = database.users.find((user) => user.id === id);
+
+  if (user) response.json(user);
+  else response.status(404).json('User not found')
+})
+
+app.put('/images', (request, response) => {
+  const { id } = request.body;
+
+  const user = database.users.find((user) => user.id === id);
+
+  if (user) {
+    user.entries++;
+    response.json(user.entries);
+  } else {
+    response.status(404).json('User not found');
   }
 })
 
