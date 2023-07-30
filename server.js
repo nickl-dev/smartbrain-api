@@ -34,7 +34,7 @@ const database = {
       email: 'john@gmail.com',
       password: 'cookies',
       entries: 0,
-      dateJoined: new Date()
+      joined: new Date()
     },
     {
       id: '1',
@@ -42,7 +42,7 @@ const database = {
       email: 'sally@gmail.com',
       password: 'cakes',
       entries: 0,
-      dateJoined: new Date()
+      joined: new Date()
     }
   ]
 }
@@ -55,12 +55,13 @@ app.post('/signin', (request, response) => {
   const { email, password } = request.body;
   const user = database.users.find((user) => user.email === email && user.password === password);
 
-  if (user) response.json('success');
+  if (user) response.json(user);
   else response.status(404).json('User not found');
 })
 
 
 app.post('/register', (request, response) => {
+  console.log(request.body)
   const { name, email, password } = request.body;
 
   const newUser = {
@@ -69,7 +70,7 @@ app.post('/register', (request, response) => {
     email,
     password,
     entries: 0,
-    dateJoined: new Date()
+    joined: new Date()
   }
 
   if (name && email && password) {
@@ -88,7 +89,7 @@ app.get('/profile/:id', (request, response) => {
   else response.status(404).json('User not found')
 })
 
-app.put('/images', (request, response) => {
+app.put('/image', (request, response) => {
   const { id } = request.body;
 
   const user = database.users.find((user) => user.id === id);
