@@ -1,6 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const knex = require('knex');
+
+const database = knex({
+  client: 'pg',
+  connection: {
+    host : '127.0.0.1',
+    user : 'postgres',
+    password : 'test',
+    database : 'smartbrain'
+  }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,7 +37,7 @@ app.listen(PORT, () => {
   /image -> PUT -> return user
 */
 
-const database = {
+const databaseArray = {
   users: [
     {
       id: '0',
@@ -48,7 +59,7 @@ const database = {
 }
 
 app.get('/', (request, response) => {
-  response.json(database.users)
+  response.json(databaseArray.users)
 })
 
 app.post('/signin', (request, response) => {
@@ -65,28 +76,29 @@ app.post('/register', (request, response) => {
   const { name, email, password } = request.body;
 
   const newUser = {
-    id: '1',
     name,
     email,
-    password,
-    entries: 0,
     joined: new Date()
   }
 
-  if (name && email && password) {
-    database.users.push(newUser);
-    response.json(newUser);
-  } else {
-    response.json('Invalid credentials');
-  }
+  database('users')
+    .returning('*')
+    .insert(newUser)
+    .then(user => response.json(user[0]))
+    .catch(() => response.status(400).json('Unable to register user'));
 })
 
 app.get('/profile/:id', (request, response) => {
   const { id } = request.params;
-  const user = database.users.find((user) => user.id === id);
 
-  if (user) response.json(user);
-  else response.status(404).json('User not found')
+  database('users')
+    .select('*')
+    .where({ id })
+    .then((users) => { 
+      if (users.length) response.json(users[0])
+      else response.status(400).json('User not found') 
+    })
+    .catch(() => response.status(400).json('Error getting user'))
 })
 
 app.put('/image', (request, response) => {
