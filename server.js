@@ -1,9 +1,13 @@
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
+const clarifai = require('clarifai');
 const cors = require('cors');
 const express = require('express');
 const knex = require('knex');
 const PORT = process.env.PORT || 3000;
+require('dotenv').config()
+
+const clarifaiApp = new clarifai.App({ apiKey: process.env.CLARIFAI_API_KEY });
 
 const app = express();
 
@@ -28,15 +32,6 @@ app.listen(PORT, () => {
     date: new Date()
   })
 })
-
-/*
-  ROUTES:
-  / -> GET -> return 'API IS WORKING'
-  /signin -> POST ->  return user
-  /register -> POST -> return user
-  /profile/:userID -> GET -> return user
-  /image -> PUT -> return user
-*/
 
 app.get('/', (request, response) => {
   database.select('*').from('users')
@@ -123,6 +118,12 @@ app.put('/image', (request, response) => {
     .returning('entries')
     .then((entries) => response.json(entries[0].entries))
     .catch(() => response.status(400).json('Unable to get entries'))
+})
+
+app.post('/imageurl', (request, response) => {
+  clarifaiApp.models.predict('face-detection', request.body.input)
+  .then((data) => response.json(data))
+  .catch(() => response.status(400).json('Unable to work with API'))
 })
 
 
