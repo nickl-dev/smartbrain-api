@@ -1,16 +1,20 @@
+// Get access to process.env
+require('dotenv').config();
+
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
-const clarifai = require('clarifai');
 const cors = require('cors');
 const express = require('express');
 const knex = require('knex');
 const PORT = process.env.PORT || 3000;
-require('dotenv').config()
 
-const clarifaiApp = new clarifai.App({ apiKey: process.env.CLARIFAI_API_KEY });
+// Separated functions for API routes
+const register = require('./controllers/register');
+const signIn = require('./controllers/signIn');
+const profile = require('./controllers/profile');
+const image = require('./controllers/image');
 
-const app = express();
-
+// Connecting postgres database
 const database = knex({
   client: 'pg',
   connection: {
@@ -21,10 +25,13 @@ const database = knex({
   }
 });
 
+// Express setup
+const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
+// Server message
 app.listen(PORT, () => {
   console.log({
     PORT,
@@ -33,97 +40,10 @@ app.listen(PORT, () => {
   })
 })
 
-app.get('/', (request, response) => {
-  database.select('*').from('users')
-  .then((users) => response.json(users))
-  .catch(() => response.status(400).json('Unable to get users'))
-})
-
-app.post('/signin', (request, response) => {
-  const { email, password } = request.body;
-
-  database.select('hash', 'email')
-    .from('login')
-    .where('email', '=', email)
-    .then((data) => {
-      // Check to make sure that the password matches the hash
-      const isValid = bcrypt.compareSync(password, data[0].hash);
-
-      if (isValid) {
-        return database.select('*')
-          .from('users')
-          .where('email', '=', email)
-          .then((user) => response.json(user[0]))
-          .catch(() => response.status(400).json('Unable to get user'))
-      } else {
-        response.status(400).json('Wrong credentials');
-      }
-    })
-    .catch(() => response.status(400).json('Wrong credentials'));
-})
-
-
-app.post('/register', (request, response) => {
-  const emailRegexp = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  const { name, email, password } = request.body;
-  
-  // Check to make sure that the email address is valid
-  if (!emailRegexp.test(email)) return response.status(400).json('Invalid email address');
-
-  bcrypt.genSalt(10, (error, salt) => {
-    bcrypt.hash(password, salt, (error, hash) => {
-
-        // Store hash in the login database
-      database.transaction((trx) => {
-        trx.insert({ hash, email })
-          .into('login')
-          .returning('email')
-          .then((loginEmail) => {
-            return trx('users')
-              .returning('*')
-              .insert({
-                name,
-                email: loginEmail[0].email,
-                joined: new Date ()
-              })
-              .then((user) => response.json(user[0]))
-          })
-          .then(trx.commit)
-          .catch(trx.rollback)
-      })
-      .catch(() => response.status(400).json('Unable to register'))
-    });
-  });
-})
-
-app.get('/profile/:id', (request, response) => {
-  const { id } = request.params;
-
-  database('users')
-    .select('*')
-    .where({ id })
-    .then((users) => { 
-      if (users.length) response.json(users[0])
-      else response.status(400).json('User not found') 
-    })
-    .catch(() => response.status(400).json('Error getting user'))
-})
-
-app.put('/image', (request, response) => {
-  const { id } = request.body;
-
-  database('users')
-    .where('id', '=', id)
-    .increment('entries', 1)
-    .returning('entries')
-    .then((entries) => response.json(entries[0].entries))
-    .catch(() => response.status(400).json('Unable to get entries'))
-})
-
-app.post('/imageurl', (request, response) => {
-  clarifaiApp.models.predict('face-detection', request.body.input)
-  .then((data) => response.json(data))
-  .catch(() => response.status(400).json('Unable to work with API'))
-})
-
-
+// Routes
+app.get('/', (request, response) => response.json(database.users));
+app.get('/profile/:id', (request, response) => profile.handleGetProfileById(request, response, database));  
+app.post('/signin', (request, response) => signIn.handleSignIn(request, response, database, bcrypt));
+app.post('/register', (request, response) => register.handleRegister(request, response, database, bcrypt ));
+app.post('/imageurl', (request, response) => image.handleClarifaiApiCall(request, response));
+app.put('/image', (request, response) => image.handleImage(request, response, database));
