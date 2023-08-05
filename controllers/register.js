@@ -1,6 +1,9 @@
 const handleRegister = (request, response, database, bcrypt) => {
   const emailRegexp = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
   const { name, email, password } = request.body;
+
+  // Check if the name, email, and password have been entered
+  if (!name || !email || !password) return response.status(400).json('Invalid form submission');
   
   // Check to make sure that the email address is valid
   if (!emailRegexp.test(email)) return response.status(400).json('Invalid email address');

@@ -1,6 +1,8 @@
 const handleSignIn = (request, response, database, bcrypt) => {
   const { email, password } = request.body;
 
+  if (!email || !password) return response.status(400).json('Invalid form submission');
+
   database.select('hash', 'email')
     .from('login')
     .where('email', '=', email)
