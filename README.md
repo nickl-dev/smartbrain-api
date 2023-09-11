@@ -1,7 +1,7 @@
 # SmartBrain API
 
 <img 
-  src="./src/assets/images/icons8-brain-100.png"
+  src="https://seeklogo.com/images/B/brain-logo-085FB58CDA-seeklogo.com.png"
   alt="Brain"
   width="200"
   loading="lazy"
